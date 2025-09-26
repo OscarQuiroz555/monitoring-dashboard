@@ -1,29 +1,80 @@
-# React + Vite
+# ⚡ Monitoring Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Un **dashboard moderno y responsivo** para monitoreo energético en
+tiempo real (corriente, voltaje, temperatura, consumo y más).\
+Construido con **React + Vite + TailwindCSS + ApexCharts**, integrando
+Firebase como backend de datos.
 
-Currently, two official plugins are available:
+------------------------------------------------------------------------
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🚀 Tecnologías principales
 
-## React Compiler
+-   [React](https://react.dev/) + [Vite](https://vitejs.dev/) → Frontend
+    rápido y modular\
+-   [TailwindCSS](https://tailwindcss.com/) → Estilos modernos y
+    responsivos\
+-   [ApexCharts](https://apexcharts.com/) → Gráficas interactivas y
+    profesionales\
+-   [Firebase](https://firebase.google.com/) → Almacenamiento en tiempo
+    real (datos energéticos)
 
-The React Compiler is not enabled on this template. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+------------------------------------------------------------------------
 
-## Expanding the ESLint configuration
+## 📂 Estructura del proyecto
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+    src/
+    ├── assets/        # imágenes y recursos estáticos
+    ├── components/    # Navbar, Footer, Cards, ScrollButton, ChartCard
+    ├── hooks/         # useFirebase, useFavicon, etc.
+    ├── pages/         # Dashboard.jsx, Corriente.jsx, Costos.jsx, Reportes.jsx
+    ├── services/      # firebase.js, cálculos de métricas y costos
+    ├── styles/        # diseños extras (global.css, temas)
+    ├── utils/         # helpers (formatear fechas, cálculos estadísticos)
+    ├── App.jsx        # enrutador principal
+    ├── main.jsx       # punto de entrada
+    └── globals.css    # Tailwind base
 
-## estructura 
-src/
-├── assets/        # imágenes
-├── components/    # Navbar, Sidebar, Cards, Charts, etc.
-├── hooks/         # useFirebase, useChartData, etc.
-├── pages/         # Dashboard.jsx, Costs.jsx, Reports.jsx
-├── services/      # firebase.js, cálculos de costos
-├── styles/        # diseños extras 
-├── utils/         # helpers (formatear fechas, cálculos)
-├── App.jsx        # enrutador principal
-├── index.css      # Tailwind
-└── main.jsx       # entry point
+------------------------------------------------------------------------
+
+## 🖥️ Funcionalidades actuales
+
+-   Visualización de datos simulados de corriente en tiempo real\
+-   KPIs del día (actual, media, máximo, mínimo) en tarjetas compactas\
+-   Gráfica interactiva con zoom, pan y reset\
+-   Sección dedicada para consulta por **rangos de fechas**\
+-   UI responsiva para desktop y móvil
+
+------------------------------------------------------------------------
+
+## 📌 Próximos pasos
+
+-   Conectar con datos **reales desde Firebase**\
+-   Añadir gráficas de **voltaje, temperatura y costos**\
+-   Implementar **autenticación** para distintos usuarios (admin,
+    estudiante, visitante)\
+-   Exportar reportes en PDF / Excel
+
+------------------------------------------------------------------------
+
+## ⚙️ Instalación y uso
+
+``` bash
+# Clonar el repositorio
+git clone https://github.com/tuusuario/monitoring-dashboard.git
+cd monitoring-dashboard
+
+# Instalar dependencias
+npm install
+
+# Ejecutar en modo desarrollo
+npm run dev
+
+# Generar build de producción
+npm run build
+```
+
+------------------------------------------------------------------------
+
+## 📄 Licencia
+
+Este proyecto está bajo la licencia MIT -- libre para usar y mejorar.

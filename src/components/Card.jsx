@@ -18,7 +18,7 @@ const Card = ({
 
   return (
     <div
-      className={`bg-gradient-to-br from-white to-gray-100 shadow-md rounded-2xl p-3 flex flex-col items-center text-center relative hover:shadow-xl transition-transform transform hover:-translate-y-1 w-auto max-w-xs ${className}`}
+      className={`bg-gradient-to-br from-white to-gray-100 shadow-md rounded-2xl p-4 flex flex-col items-center text-center relative hover:shadow-xl transition-transform transform hover:-translate-y-1 w-full sm:w-60 md:w-72 lg:w-80 ${className}`}
     >
       {status && (
         <div
@@ -27,14 +27,16 @@ const Card = ({
       )}
 
       {icon && (
-        <div className="mb-2 p-2 rounded-full bg-blue-50 text-blue-700 flex items-center justify-center shadow-sm">
+        <div className="mb-2 p-2 rounded-full bg-blue-50 text-blue-700 flex items-center justify-center shadow-sm text-xl">
           {icon}
         </div>
       )}
 
-      <h2 className="text-base md:text-lg font-bold mb-1">{title}</h2>
+      <h2 className="text-base sm:text-lg md:text-xl font-bold mb-1">{title}</h2>
 
-      {description && <p className="text-sm text-gray-600 mb-2">{description}</p>}
+      {description && (
+        <p className="text-sm sm:text-base text-gray-600 mb-2">{description}</p>
+      )}
 
       {showButton && onButtonClick && (
         <button

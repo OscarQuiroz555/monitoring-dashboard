@@ -3,6 +3,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Importa la fuente Poppins desde Google Fonts */
 body {
   font-family: 'Poppins', sans-serif;
+}
+
+/* Estilos para el encabezado (Header) */
+.header-gradient {
+  background: radial-gradient(circle at center, #1e3a8a 0%, #1e40af 50%, #1e3a8a 100%);
+  background-blend-mode: overlay;
+}
+/* Estilos para el pie de página (Footer) */
+.bg-premium-blue {
+  background: radial-gradient(circle at center, #1e3a8a 0%, #1e40af 50%, #1e3a8a 100%);
+  background-blend-mode: overlay;
 }
