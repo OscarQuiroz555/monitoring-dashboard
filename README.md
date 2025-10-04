@@ -16,8 +16,7 @@ Firebase como backend de datos.
 -   [ApexCharts](https://apexcharts.com/) → Gráficas interactivas y
     profesionales\
 -   [Firebase](https://firebase.google.com/) → Almacenamiento en tiempo
-    real (datos energéticos)
-
+    real 
 ------------------------------------------------------------------------
 
 ## 📂 Estructura del proyecto

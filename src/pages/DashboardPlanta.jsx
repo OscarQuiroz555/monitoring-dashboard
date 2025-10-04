@@ -1,16 +1,44 @@
-import React from "react"; 
-import { useNavigate } from "react-router-dom"; // ✅ Importa useNavigate
+import React, { useEffect } from "react"; 
+import { useNavigate } from "react-router-dom"; 
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import Card from "../components/Card";
 import { BoltIcon } from "@heroicons/react/24/solid";
 
-const DashboardPlanta = () => {
-  const navigate = useNavigate(); // ✅ Hook de navegación
+import { collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
+import { db } from "../services/firebaseConfig";
 
-  const handleDashboardChiller = () => {
-    navigate("/chiller"); // ✅ Redirige al DashboardChiller
+const DashboardPlanta = () => {
+  const navigate = useNavigate();
+
+  const handleDashboardVoltaje = () => {
+    navigate("/Voltaje");
   };
+
+useEffect(() => {
+  const ref = collection(db, "TelemetriaPopping/Chiller/Registros");
+  const q = query(ref, orderBy("timestamp", "desc"), limit(3));
+
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    console.clear();
+    console.log("=== Últimos 3 registros ===");
+
+    snapshot.docs.forEach((doc) => {
+      const data = doc.data();
+
+      // ✅ Convertimos timestamp a fecha legible
+      const fechaLegible = new Date(data.timestamp.seconds * 1000);
+      
+      console.log({
+        ...data,
+        timestampLegible: fechaLegible.toLocaleString(), // lo que verás en UI
+      });
+    });
+  });
+
+  return () => unsubscribe(); // limpiar listener al desmontar
+}, []);
+
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -26,7 +54,7 @@ const DashboardPlanta = () => {
           title="Dashboard Chiller"
           description="Monitorea parámetros eléctricos y térmicos en tiempo real."
           buttonText="Ir al Dashboard"
-          onButtonClick={handleDashboardChiller} // ✅ Navega al click
+          onButtonClick={handleDashboardVoltaje}
           showButton={true}
         />
       </main>
