@@ -49,7 +49,7 @@ const calcularEstado = (actuales, ts) => {
   const ahora = new Date();
   const diffMin = (ahora - ts) / 1000 / 60; // diferencia en minutos
 
-  if (diffMin > 5) return "desconectado"; 
+  if (diffMin > 5) return "desconectado";
   if (Object.values(actuales).some(v => v === null || v === undefined)) return "datos_parciales";
 
   return "conectado";
@@ -68,71 +68,94 @@ export const useRegistrosActuales = (maxHistorico = 30) => {
   // -----------------------------
   // Procesar cada registro de Firebase
   // -----------------------------
-  const procesarRegistro = useCallback((registro) => {
-    if (!registro) return;
+  const procesarRegistro = useCallback(
+    (registro) => {
+      if (!registro) return;
 
-    const ts = registro.timestamp?.toDate ? registro.timestamp.toDate() : new Date(registro.timestamp);
+      const ts = registro.timestamp?.toDate
+        ? registro.timestamp.toDate()
+        : new Date(registro.timestamp);
 
-    // -----------------------------
-    // Actualizar datos actuales
-    // -----------------------------
-    const actuales = PARAMETROS_ACTUALES.reduce((acc, p) => {
-      acc[p] = registro[p] ?? null;
-      return acc;
-    }, {});
+      // -----------------------------
+      // Actualizar datos actuales
+      // -----------------------------
+      const actuales = PARAMETROS_ACTUALES.reduce((acc, p) => {
+        acc[p] = registro[p] ?? null;
+        return acc;
+      }, {});
 
-    setDatosActuales(actuales);
-    setTimestamp(ts);
+      setDatosActuales(actuales);
+      setTimestamp(ts);
 
-    // -----------------------------
-    // Actualizar máximos del día (solo si llega un valor mayor)
-    // -----------------------------
-    setDatosMaximos(prev => {
-      const nuevosMax = { ...prev };
-      PARAMETROS_MAXIMOS.forEach(p => {
-        const valorNuevo = registro[p];
-        const valorPrev = prev[p] ?? -Infinity;
-        if (valorNuevo !== null && valorNuevo !== undefined) {
-          nuevosMax[p] = valorNuevo > valorPrev ? valorNuevo : valorPrev;
-        }
+      // -----------------------------
+      // Actualizar máximos del día (solo si llega un valor mayor)
+      // -----------------------------
+      setDatosMaximos((prev) => {
+        const nuevosMax = { ...prev };
+        PARAMETROS_MAXIMOS.forEach((p) => {
+          const valorNuevo = registro[p];
+          const valorPrev = prev[p] ?? -Infinity;
+          if (valorNuevo !== null && valorNuevo !== undefined) {
+            nuevosMax[p] = valorNuevo > valorPrev ? valorNuevo : valorPrev;
+          }
+        });
+        return nuevosMax;
       });
-      return nuevosMax;
-    });
 
-    // -----------------------------
-    // Actualizar mínimos del día (último registro)
-    // -----------------------------
-    setDatosMinimos(prev => {
-      const nuevosMin = { ...prev };
-      PARAMETROS_MINIMOS.forEach(p => {
-        const valorNuevo = registro[p];
-        if (valorNuevo !== null && valorNuevo !== undefined) {
-          nuevosMin[p] = valorNuevo;
-        }
+      // -----------------------------
+      // Actualizar mínimos del día (último registro)
+      // -----------------------------
+      setDatosMinimos((prev) => {
+        const nuevosMin = { ...prev };
+        PARAMETROS_MINIMOS.forEach((p) => {
+          const valorNuevo = registro[p];
+          if (valorNuevo !== null && valorNuevo !== undefined) {
+            nuevosMin[p] = valorNuevo;
+          }
+        });
+        return nuevosMin;
       });
-      return nuevosMin;
-    });
 
-    // -----------------------------
-    // Actualizar histórico (para la gráfica)
-    // -----------------------------
-    setHistorico(prev => {
-      const nuevo = [
-        ...prev,
-        {
-          timestamp: ts,
-          fecha: ts.toLocaleDateString(),
-          hora: ts.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true }),
-          ...actuales,
-          voltaje_maximo: registro.voltaje_maximo ?? null,
-          voltaje_minimo: registro.voltaje_minimo ?? null,
-        }
-      ];
-      if (nuevo.length > maxHistorico) nuevo.shift(); // mantener solo los últimos registros
-      return nuevo;
-    });
+      // -----------------------------
+      // Actualizar histórico (para la gráfica)
+      // -----------------------------
+      setHistorico((prev) => {
+        const nuevo = [
+          ...prev,
+          {
+            timestamp: ts,
+            fecha: ts.toLocaleDateString(),
+            hora: ts.toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+            }),
+            ...actuales,
+            // 🔹 Incluir todos los valores necesarios para las gráficas
+            voltaje_maximo: registro.voltaje_maximo ?? null,
+            voltaje_minimo: registro.voltaje_minimo ?? null,
+            corriente_maxima: registro.corriente_maxima ?? null,
+            corriente_minima: registro.corriente_minima ?? null,
+            frecuencia_maxima: registro.frecuencia_maxima ?? null,
+            frecuencia_minima: registro.frecuencia_minima ?? null,
+            potencia_maxima: registro.potencia_maxima ?? null,
+            potencia_minima: registro.potencia_minima ?? null,
+            potencia_aparente_maxima: registro.potencia_aparente_maxima ?? null,
+            potencia_aparente_minima: registro.potencia_aparente_minima ?? null,
+            potencia_reactiva_maxima: registro.potencia_reactiva_maxima ?? null,
+            potencia_reactiva_minima: registro.potencia_reactiva_minima ?? null,
+            factor_potencia_maximo: registro.factor_potencia_maximo ?? null,
+            factor_potencia_minimo: registro.factor_potencia_minimo ?? null,
+          },
+        ];
 
-  }, [maxHistorico]);
+        // mantener solo los últimos registros
+        if (nuevo.length > maxHistorico) nuevo.shift();
+        return nuevo;
+      });
+    },
+    [maxHistorico]
+  );
 
   // -----------------------------
   // Escuchar registros de Firebase en tiempo real
@@ -145,7 +168,10 @@ export const useRegistrosActuales = (maxHistorico = 30) => {
   // -----------------------------
   // Estado del equipo
   // -----------------------------
-  const estado = useMemo(() => calcularEstado(datosActuales, timestamp), [datosActuales, timestamp]);
+  const estado = useMemo(
+    () => calcularEstado(datosActuales, timestamp),
+    [datosActuales, timestamp]
+  );
 
   return { datosActuales, datosMaximos, datosMinimos, timestamp, estado, historico };
 };

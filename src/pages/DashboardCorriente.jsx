@@ -1,84 +1,117 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import Card from "../components/Card";
 import ChartCard from "../components/ChartCard";
-import StatusMessage from "../components/StatusMessage";
 import { useRegistrosActuales } from "../hooks/useRegistrosActuales";
 
-const PARAMETROS_DISPLAY = [
-  { key: "corriente_promedio", title: "Corriente Actual", unit: "A" },
-  { key: "corriente_maxima", title: "Corriente Máxima", unit: "A" },
-];
-
 const DashboardCorriente = () => {
-  const navigate = useNavigate();
-  const { datosActuales, datosMaximos, timestamp, historico, estado } = useRegistrosActuales(30);
+  const { datosActuales, datosMaximos, datosMinimos, estado, historico } = useRegistrosActuales(30);
 
+  const navigate = useNavigate();
   const handleBack = () => navigate(-1);
 
-  const getValor = (key) => {
-    if (datosActuales[key] != null) return datosActuales[key];
-    if (datosMaximos[key] != null) return datosMaximos[key];
-    return null;
+  // Extraer valores actuales desde el hook
+  const corrienteActual = datosActuales.corriente_promedio ?? "-";
+  const corrienteMaximaDia = datosMaximos.corriente_maxima ?? "-";
+  const corrienteMinimaDia = datosMinimos.corriente_minima ?? "-";
+
+  const statusMap = {
+    conectado: "green",
+    datos_parciales: "yellow",
+    desconectado: "red",
   };
+  const statusColor = statusMap[estado] || "gray";
+
+  // Control de visualización en la gráfica
+  const [showMax, setShowMax] = useState(false);
+  const [showMin, setShowMin] = useState(false);
+
+  // Configuración de series de la gráfica
+  const seriesConfig = [
+    { name: "Corriente Actual", dataKey: "corriente_promedio", color: "#3b82f6", unit: "A" },
+    showMax && { name: "Corriente Máxima", dataKey: "corriente_maxima", color: "#ef4444", unit: "A" },
+    showMin && { name: "Corriente Mínima", dataKey: "corriente_minima", color: "#10b981", unit: "A" },
+  ].filter(Boolean);
+
+  const chartData = historico.map(r => ({
+    ...r,
+    corriente_maxima: r.corriente_maxima,
+    corriente_minima: r.corriente_minima,
+  }));
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       <Header
-        title="Dashboard de Corriente"
-        description="Monitoreo en tiempo real de la corriente eléctrica"
+        title="Dashboard Corriente"
+        description="Monitoreo de corriente en tiempo real"
         showBackButton
         onBack={handleBack}
       />
 
-      <main className="flex-1 flex flex-col gap-6 px-2 sm:px-4 py-4">
-        <section className="w-full bg-white rounded-xl shadow-md p-6 flex flex-col gap-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <h2 className="text-xl font-bold whitespace-nowrap">Datos del Día Actual</h2>
-            <div className="flex gap-4 flex-wrap">
-              {PARAMETROS_DISPLAY.map(({ key, title, unit }) => (
-                <Card
-                  key={key}
-                  variant="kpi"
-                  title={title}
-                  description={
-                    getValor(key) != null ? `${getValor(key).toFixed(2)} ${unit}` : "--"
-                  }
-                  status={
-                    estado === "conectado"
-                      ? "green"
-                      : estado === "datos_parciales"
-                      ? "yellow"
-                      : "red"
-                  }
-                />
-              ))}
-            </div>
-          </div>
-
-          <StatusMessage
-            tipo="Corriente"
-            ultimoTimestamp={timestamp}
-            valorActual={datosActuales?.corriente_promedio}
-            estado={estado}
-          />
-
-          <ChartCard
-            title="Corriente en Tiempo Real"
-            data={historico}
-            seriesConfig={[
-              { name: "Promedio", dataKey: "corriente_promedio", color: "#22c55e", unit: "A" },
-              { name: "Máxima", dataKey: "corriente_maxima", color: "#ef4444", unit: "A" },
-            ]}
-            height={300}
-          />
+      <main className="flex-1 px-4 py-4 flex flex-col gap-4">
+        {/* Tarjetas de información */}
+        <section className="flex-1 bg-white shadow-md rounded-xl p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          <Card variant="kpi" title="Corriente Actual" description={`${corrienteActual} A`} />
+          <Card variant="kpi" title="Corriente Máxima del Día" description={`${corrienteMaximaDia} A`} />
+          <Card variant="kpi" title="Corriente Mínima del Día" description={`${corrienteMinimaDia} A`} />
+          <Card variant="kpi" title="Estado del Equipo" description={estado} status={statusColor} />
         </section>
 
-        <section className="w-full bg-white rounded-xl shadow-md p-6 flex-1">
-          <h2 className="text-xl font-bold mb-4">Datos por Rango de Días</h2>
-          {/* Aquí más tarjetas y gráficos por rango */}
+        {/* Controles para mostrar/ocultar series */}
+        <section className="flex gap-6 items-center mt-2">
+          <div className="flex items-center gap-3">
+            <span className="text-gray-700 font-medium">Corriente Máxima</span>
+            <button
+              className={`w-12 h-6 rounded-full p-1 flex items-center transition ${
+                showMax ? "bg-red-500 justify-end" : "bg-gray-300 justify-start"
+              }`}
+              onClick={() => setShowMax(!showMax)}
+            >
+              <span className="w-4 h-4 bg-white rounded-full shadow-md"></span>
+            </button>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-gray-700 font-medium">Corriente Mínima</span>
+            <button
+              className={`w-12 h-6 rounded-full p-1 flex items-center transition ${
+                showMin ? "bg-green-500 justify-end" : "bg-gray-300 justify-start"
+              }`}
+              onClick={() => setShowMin(!showMin)}
+            >
+              <span className="w-4 h-4 bg-white rounded-full shadow-md"></span>
+            </button>
+          </div>
+        </section>
+
+        {/* Gráfica */}
+        <section className="flex-1 bg-white shadow-md rounded-xl p-4 mt-2">
+          <ChartCard
+            title="Histórico de Corriente"
+            data={chartData}
+            seriesConfig={seriesConfig}
+            curve="smooth"
+            height={320}
+            extraOptions={{
+              tooltip: {
+                x: {
+                  formatter: val => {
+                    const date = new Date(val);
+                    return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: true,
+                    })}`;
+                  },
+                },
+              },
+              chart: {
+                toolbar: { show: true, tools: { download: true, zoom: true, reset: true } },
+              },
+              yaxis: { labels: { formatter: val => `${val} A` } },
+            }}
+          />
         </section>
       </main>
 
