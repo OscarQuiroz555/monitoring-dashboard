@@ -1,20 +1,62 @@
 // src/components/Header.jsx
-import React from "react";
+import React, { useState } from "react";
 import { ArrowLeftIcon } from "@heroicons/react/24/solid";
 import logo from "../assets/Logo_perlas_explosivas_.png";
 
 const Header = ({ title, description, showBackButton = false, onBack }) => {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleBackClick = async () => {
+    if (isLoading) return;
+    setIsLoading(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 800)); // pequeño delay de animación
+      onBack(); // ejecuta la función que recibes del padre
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <header className="header-gradient text-white px-6 py-3 shadow-xl relative flex items-center justify-center">
       
       {/* Botón Volver a la izquierda */}
       {showBackButton && (
         <button
-          onClick={onBack}
-          className="absolute left-6 flex items-center gap-2 bg-blue-600 hover:bg-blue-500/90 transition-colors text-white font-semibold px-3 py-2 rounded-lg shadow-md hover:shadow-lg text-sm md:text-base"
+          onClick={handleBackClick}
+          disabled={isLoading}
+          className={`absolute left-6 flex items-center gap-2 
+            ${isLoading ? "bg-blue-400 cursor-wait" : "bg-blue-600 hover:bg-blue-500/90"} 
+            transition-colors text-white font-semibold px-3 py-2 rounded-lg shadow-md 
+            hover:shadow-lg text-sm md:text-base`}
         >
-          <ArrowLeftIcon className="h-5 w-5" />
-          Volver
+          {isLoading ? (
+            <svg
+              className="animate-spin h-5 w-5 text-white"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v8H4z"
+              ></path>
+            </svg>
+          ) : (
+            <>
+              <ArrowLeftIcon className="h-5 w-5" />
+              Volver
+            </>
+          )}
         </button>
       )}
 

@@ -5,6 +5,7 @@ import { Routes, Route } from "react-router-dom";
 import DashboardPlanta from "./pages/DashboardPlanta";
 import DashboardCorriente from "./pages/DashboardCorriente";
 import DashboardVoltaje from "./pages/DashboardVoltaje";
+import DashboardChiller  from "./pages/DashboardChiller"; 
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
       <Route path="/" element={<DashboardPlanta />} />
       <Route path="/Corriente" element={<DashboardCorriente />} />
       <Route path="/Voltaje" element={<DashboardVoltaje />} />
+      <Route path="/Chiller" element={<DashboardChiller />} />
     </Routes>
   );
 }
