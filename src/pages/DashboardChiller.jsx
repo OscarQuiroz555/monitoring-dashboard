@@ -11,6 +11,7 @@ const DashboardChiller = () => {
 
   const handleCorriente = () => navigate("/Corriente");
   const handleVoltaje = () => navigate("/Voltaje");
+  const handleCorrienteRangos = () => navigate("/CorrienteRangos");
   const handleBack = () => navigate(-1);
 
   const ultimaActualizacion = timestamp
@@ -136,10 +137,10 @@ const DashboardChiller = () => {
               </h3>
               <p className="text-gray-500 text-md mb-4">(por definir)</p>
               <button
-                disabled
-                className="bg-gray-300 text-gray-600 px-4 py-2 rounded-lg text-sm font-semibold cursor-not-allowed"
+                onClick={handleCorrienteRangos}
+                className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg shadow-md text-sm font-semibold transition-colors"
               >
-                Próximamente
+                Ir al Dashboard
               </button>
             </div>
 

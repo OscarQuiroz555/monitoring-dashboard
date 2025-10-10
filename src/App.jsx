@@ -6,6 +6,7 @@ import DashboardPlanta from "./pages/DashboardPlanta";
 import DashboardCorriente from "./pages/DashboardCorriente";
 import DashboardVoltaje from "./pages/DashboardVoltaje";
 import DashboardChiller  from "./pages/DashboardChiller"; 
+import DashboardCorrienteRangos from "./pages/DashboardCorrienteRangos";
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
       <Route path="/Corriente" element={<DashboardCorriente />} />
       <Route path="/Voltaje" element={<DashboardVoltaje />} />
       <Route path="/Chiller" element={<DashboardChiller />} />
+      <Route path="/CorrienteRangos" element={<DashboardCorrienteRangos />} />
     </Routes>
   );
 }
