@@ -1,10 +1,8 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { escucharRegistros } from "../services/firebaseData";
 
-// -----------------------------
-// Parámetros que se monitorean en tiempo real (tarjetas y gráfico)
-// -----------------------------
-const PARAMETROS_ACTUALES = [
+// --- Parámetros “actuales” (tarjetas + serie) ---
+const PARAM_ACTUALES = [
   "corriente_promedio",
   "voltaje_promedio",
   "frecuencia_promedio",
@@ -14,10 +12,8 @@ const PARAMETROS_ACTUALES = [
   "factor_potencia_promedio",
 ];
 
-// -----------------------------
-// Parámetros máximos del día (solo se actualizan si llega un valor mayor)
-// -----------------------------
-const PARAMETROS_MAXIMOS = [
+// --- Máximos del día (solo si llega > mostrado) ---
+const PARAM_MAX = [
   "corriente_maxima",
   "voltaje_maximo",
   "frecuencia_maxima",
@@ -27,10 +23,8 @@ const PARAMETROS_MAXIMOS = [
   "factor_potencia_maximo",
 ];
 
-// -----------------------------
-// Parámetros mínimos del día (solo se actualizan con último registro)
-// -----------------------------
-const PARAMETROS_MINIMOS = [
+// --- Mínimos del día (llegan desde Firebase y se muestran tal cual) ---
+const PARAM_MIN = [
   "corriente_minima",
   "voltaje_minimo",
   "frecuencia_minima",
@@ -40,138 +34,141 @@ const PARAMETROS_MINIMOS = [
   "factor_potencia_minimo",
 ];
 
-// -----------------------------
-// Función para calcular estado del equipo
-// -----------------------------
-const calcularEstado = (actuales, ts) => {
-  if (!ts) return "desconectado";
+// Helpers
+const num = (v) => (v == null ? null : Number(v));
+const zerosObj = (keys) => keys.reduce((a, k) => ((a[k] = 0), a), {});
+const toMillis = (row) => {
+  // Prioriza cierre de minuto si existe (segundos -> ms)
+  if (row?.minuteEndTs != null && Number.isFinite(Number(row.minuteEndTs))) {
+    return Number(row.minuteEndTs) * 1000;
+  }
+  const t = row?.timestamp;
+  const fs = t?.toMillis?.();
+  if (Number.isFinite(fs)) return fs;
+  if (t instanceof Date) return t.getTime();
+  const asNum = Number(t);
+  if (Number.isFinite(asNum)) return asNum;
+  return Date.now();
+};
 
-  const ahora = new Date();
-  const diffMin = (ahora - ts) / 1000 / 60; // diferencia en minutos
-
+const calcularEstado = (actuales, tsDate) => {
+  if (!tsDate) return "desconectado";
+  const diffMin = (Date.now() - tsDate.getTime()) / 1000 / 60;
   if (diffMin > 5) return "desconectado";
-  if (Object.values(actuales).some(v => v === null || v === undefined)) return "datos_parciales";
-
+  if (Object.values(actuales).some((v) => v == null)) return "datos_parciales";
   return "conectado";
 };
 
-// -----------------------------
-// Hook principal
-// -----------------------------
-export const useRegistrosActuales = (maxHistorico = 30) => {
-  const [datosActuales, setDatosActuales] = useState({});
-  const [datosMaximos, setDatosMaximos] = useState({});
-  const [datosMinimos, setDatosMinimos] = useState({});
-  const [timestamp, setTimestamp] = useState(null);
-  const [historico, setHistorico] = useState([]); // últimos registros para la gráfica
+export const useRegistrosActuales = (maxHistorico = 180) => {
+  // Estados
+  const [datosActuales, setDatosActuales] = useState(zerosObj(PARAM_ACTUALES));
+  const [datosMaximos, setDatosMaximos] = useState(zerosObj(PARAM_MAX));
+  const [datosMinimos, setDatosMinimos] = useState(zerosObj(PARAM_MIN)); // se sobrescriben tal cual llegan
+  const [timestamp, setTimestamp] = useState(null); // Date
+  const [historico, setHistorico] = useState([]);   // todos los puntos (actual/min/max)
+  const [loading, setLoading] = useState(true);     // 👈 NUEVO: loader al entrar a la página
 
-  // -----------------------------
-  // Procesar cada registro de Firebase
-  // -----------------------------
-  const procesarRegistro = useCallback(
-    (registro) => {
-      if (!registro) return;
+  // Para reset diario
+  const ultimoDiaRef = useRef(null);
 
-      const ts = registro.timestamp?.toDate
-        ? registro.timestamp.toDate()
-        : new Date(registro.timestamp);
+  const resetDia = useCallback(() => {
+    setDatosActuales(zerosObj(PARAM_ACTUALES));
+    setDatosMaximos(zerosObj(PARAM_MAX));
+    setDatosMinimos(zerosObj(PARAM_MIN));
+    setTimestamp(null);
+    setHistorico([]);
+    // No tocamos `loading` aquí: seguimos recibiendo datos en el día actual.
+  }, []);
 
-      // -----------------------------
-      // Actualizar datos actuales
-      // -----------------------------
-      const actuales = PARAMETROS_ACTUALES.reduce((acc, p) => {
-        acc[p] = registro[p] ?? null;
-        return acc;
-      }, {});
+  const procesarRegistro = useCallback((registro) => {
+    if (!registro) return;
 
-      setDatosActuales(actuales);
-      setTimestamp(ts);
+    // 1) Timestamp robusto
+    const tsMs = toMillis(registro);
+    const ts = new Date(tsMs);
 
-      // -----------------------------
-      // Actualizar máximos del día (solo si llega un valor mayor)
-      // -----------------------------
-      setDatosMaximos((prev) => {
-        const nuevosMax = { ...prev };
-        PARAMETROS_MAXIMOS.forEach((p) => {
-          const valorNuevo = registro[p];
-          const valorPrev = prev[p] ?? -Infinity;
-          if (valorNuevo !== null && valorNuevo !== undefined) {
-            nuevosMax[p] = valorNuevo > valorPrev ? valorNuevo : valorPrev;
-          }
-        });
-        return nuevosMax;
+    // ✅ Guard anti-backlog: ignora documentos anteriores a HOY
+    const startToday = new Date();
+    startToday.setHours(0, 0, 0, 0); // 00:00 local
+    if (ts < startToday) return;
+
+    // 🔻 Apaga el loader cuando llega el primer doc de HOY
+    if (loading) setLoading(false);
+
+    // 2) Reset si cambia el día (empieza en 0)
+    const dia = ts.toISOString().slice(0, 10); // YYYY-MM-DD
+    if (ultimoDiaRef.current && ultimoDiaRef.current !== dia) {
+      resetDia();
+    }
+    ultimoDiaRef.current = dia;
+
+    // 3) ACTUALES (se muestran tal cual llegan)
+    const actuales = PARAM_ACTUALES.reduce((acc, p) => {
+      acc[p] = num(registro[p]);
+      return acc;
+    }, {});
+    setDatosActuales(() => actuales); // siempre el último
+    setTimestamp(ts);
+
+    // 4) MÁXIMOS (solo si llega MAYOR)
+    setDatosMaximos((prev) => {
+      const nuevos = { ...prev };
+      PARAM_MAX.forEach((p) => {
+        const nuevo = num(registro[p]);
+        const anterior = prev[p] ?? 0; // arranca en 0 cada día
+        if (nuevo != null && nuevo > anterior) {
+          nuevos[p] = nuevo;
+        }
       });
+      return nuevos;
+    });
 
-      // -----------------------------
-      // Actualizar mínimos del día (último registro)
-      // -----------------------------
-      setDatosMinimos((prev) => {
-        const nuevosMin = { ...prev };
-        PARAMETROS_MINIMOS.forEach((p) => {
-          const valorNuevo = registro[p];
-          if (valorNuevo !== null && valorNuevo !== undefined) {
-            nuevosMin[p] = valorNuevo;
-          }
-        });
-        return nuevosMin;
+    // 5) MÍNIMOS (llegan de Firebase y se muestran TAL CUAL)
+    setDatosMinimos(() => {
+      const nuevos = {};
+      PARAM_MIN.forEach((p) => {
+        nuevos[p] = num(registro[p]); // sin cálculo local
       });
+      return nuevos;
+    });
 
-      // -----------------------------
-      // Actualizar histórico (para la gráfica)
-      // -----------------------------
-      setHistorico((prev) => {
-        const nuevo = [
-          ...prev,
-          {
-            timestamp: ts,
-            fecha: ts.toLocaleDateString(),
-            hora: ts.toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: true,
-            }),
-            ...actuales,
-            // 🔹 Incluir todos los valores necesarios para las gráficas
-            voltaje_maximo: registro.voltaje_maximo ?? null,
-            voltaje_minimo: registro.voltaje_minimo ?? null,
-            corriente_maxima: registro.corriente_maxima ?? null,
-            corriente_minima: registro.corriente_minima ?? null,
-            frecuencia_maxima: registro.frecuencia_maxima ?? null,
-            frecuencia_minima: registro.frecuencia_minima ?? null,
-            potencia_maxima: registro.potencia_maxima ?? null,
-            potencia_minima: registro.potencia_minima ?? null,
-            potencia_aparente_maxima: registro.potencia_aparente_maxima ?? null,
-            potencia_aparente_minima: registro.potencia_aparente_minima ?? null,
-            potencia_reactiva_maxima: registro.potencia_reactiva_maxima ?? null,
-            potencia_reactiva_minima: registro.potencia_reactiva_minima ?? null,
-            factor_potencia_maximo: registro.factor_potencia_maximo ?? null,
-            factor_potencia_minimo: registro.factor_potencia_minimo ?? null,
-          },
-        ];
+    // 6) HISTÓRICO (gráfica: guarda TODO lo que llega)
+    setHistorico((prev) => {
+      const fila = {
+        timestamp: ts,
+        fecha: ts.toLocaleDateString(),
+        hora: ts.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true }),
 
-        // mantener solo los últimos registros
-        if (nuevo.length > maxHistorico) nuevo.shift();
-        return nuevo;
-      });
-    },
-    [maxHistorico]
-  );
+        // actuales
+        ...actuales,
 
-  // -----------------------------
-  // Escuchar registros de Firebase en tiempo real
-  // -----------------------------
+        // máximos y mínimos tal cual vengan
+        ...PARAM_MAX.reduce((a, p) => ((a[p] = num(registro[p])), a), {}),
+        ...PARAM_MIN.reduce((a, p) => ((a[p] = num(registro[p])), a), {}),
+      };
+
+      const nuevo = [...prev, fila];
+      return nuevo.length > maxHistorico ? nuevo.slice(-maxHistorico) : nuevo;
+    });
+  }, [resetDia, maxHistorico, loading]);
+
   useEffect(() => {
     const unsubscribe = escucharRegistros(procesarRegistro);
     return () => unsubscribe();
   }, [procesarRegistro]);
 
-  // -----------------------------
-  // Estado del equipo
-  // -----------------------------
   const estado = useMemo(
     () => calcularEstado(datosActuales, timestamp),
     [datosActuales, timestamp]
   );
 
-  return { datosActuales, datosMaximos, datosMinimos, timestamp, estado, historico };
+  return {
+    loading,         // 👈 NUEVO: úsalo en tarjetas/botones/gráfica
+    datosActuales,   // tarjetas “actual”
+    datosMaximos,    // tarjetas “máximos” (solo suben)
+    datosMinimos,    // tarjetas “mínimos” (tal como llegan)
+    timestamp,
+    estado,
+    historico,       // para la gráfica: incluye actuales, máximos y mínimos
+  };
 };

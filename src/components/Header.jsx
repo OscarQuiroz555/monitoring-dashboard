@@ -1,7 +1,7 @@
 // src/components/Header.jsx
 import React, { useState } from "react";
 import { ArrowLeftIcon } from "@heroicons/react/24/solid";
-import logo from "../assets/Logo_perlas_explosivas_.png";
+import logo from "../assets/logoprincipal.jpg"; // Asegúrate de tener un logo en esta ruta o ajusta la ruta
 
 const Header = ({ title, description, showBackButton = false, onBack }) => {
   const [isLoading, setIsLoading] = useState(false);
