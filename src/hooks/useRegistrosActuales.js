@@ -66,6 +66,7 @@ export const useRegistrosActuales = (maxHistorico = 180) => {
   const [datosMinimos, setDatosMinimos] = useState(zerosObj(PARAM_MIN)); // se sobrescriben tal cual llegan
   const [timestamp, setTimestamp] = useState(null); // Date
   const [historico, setHistorico] = useState([]);   // todos los puntos (actual/min/max)
+  const [loading, setLoading] = useState(true);     // 👈 NUEVO: loader al entrar a la página
 
   // Para reset diario
   const ultimoDiaRef = useRef(null);
@@ -76,6 +77,7 @@ export const useRegistrosActuales = (maxHistorico = 180) => {
     setDatosMinimos(zerosObj(PARAM_MIN));
     setTimestamp(null);
     setHistorico([]);
+    // No tocamos `loading` aquí: seguimos recibiendo datos en el día actual.
   }, []);
 
   const procesarRegistro = useCallback((registro) => {
@@ -89,6 +91,9 @@ export const useRegistrosActuales = (maxHistorico = 180) => {
     const startToday = new Date();
     startToday.setHours(0, 0, 0, 0); // 00:00 local
     if (ts < startToday) return;
+
+    // 🔻 Apaga el loader cuando llega el primer doc de HOY
+    if (loading) setLoading(false);
 
     // 2) Reset si cambia el día (empieza en 0)
     const dia = ts.toISOString().slice(0, 10); // YYYY-MM-DD
@@ -145,7 +150,7 @@ export const useRegistrosActuales = (maxHistorico = 180) => {
       const nuevo = [...prev, fila];
       return nuevo.length > maxHistorico ? nuevo.slice(-maxHistorico) : nuevo;
     });
-  }, [resetDia, maxHistorico]);
+  }, [resetDia, maxHistorico, loading]);
 
   useEffect(() => {
     const unsubscribe = escucharRegistros(procesarRegistro);
@@ -158,6 +163,7 @@ export const useRegistrosActuales = (maxHistorico = 180) => {
   );
 
   return {
+    loading,         // 👈 NUEVO: úsalo en tarjetas/botones/gráfica
     datosActuales,   // tarjetas “actual”
     datosMaximos,    // tarjetas “máximos” (solo suben)
     datosMinimos,    // tarjetas “mínimos” (tal como llegan)
